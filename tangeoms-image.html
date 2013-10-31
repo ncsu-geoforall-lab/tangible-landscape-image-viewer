@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<!--
+    TanGeoMS image viewer
+
+    Simple image viewer designed to be used with Tangible geospatial
+    modeling system (TenGeoMS).
+
+    Usage:
+    chromium-browser -(delete this)-app=path/to/tangeom-image.html
+    firefox path/to/tangeom-image.html
+
+    TODO: license, link to repository, bugs, changelog
+
+    Author: Vaclav Petras wenzeslaus gmail com, NCSU OSGeoREL
+
+    Version: 1.0
+-->
+<html>
+<head>
+    <title>TanGeoMS image viewer</title>
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="description" content=""/>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        html, body, #image {
+            max-height: 100%;
+            max-width: 100%;
+        }
+
+        #drop_zone {
+            border: 2px dashed #bbb;
+            -moz-border-radius: 5px;
+            -webkit-border-radius: 5px;
+            border-radius: 5px;
+            padding: 25px;
+            text-align: center;
+            font: 20pt bold;
+            color: #bbb;
+            width: 50%;
+            height: 20%;
+            border: 50px;
+        }
+    </style>
+</head>
+<body>
+   <div id="image">
+    <!-- TODO: put some image directly here -->
+    <div id="drop_zone">Drop files here</div>
+    <input type="file" id="file" name="file"/>
+    <!-- TODO: add some default image, needs some dynamic style changes
+    e.g., http://grass.osgeo.org/uploads/images/logo/grass_logo_animated.gif
+    -->
+    <!-- Actual image must be inserted into a div which is 100% too,
+    to get the behavior we want. -->
+    <img id="theimage" style="height: 100%; width: 100%;" src="" alt="The image showed by the viewer"/>
+    </div>
+<script>
+
+    var isImageListening = false;
+
+    /* Handles file selection or drop.
+    
+    Reads the file, sets the image element, hides file selection elements,
+    adds drop listeners to the image itself.
+    */
+    function handleFileSelect(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+
+        // getting FileList object
+        // handling drop and selection here
+        // TODO: maybe there is some common interface
+        var files = null;
+        try {
+            files = evt.dataTransfer.files;
+        } catch (err) {
+            files = evt.target.files;
+        }
+
+        // read the file
+        var reader  = new FileReader();
+        reader.onloadend = function () {
+            myimage.src = reader.result;
+        }
+        // we can handle only the firts file
+        reader.readAsDataURL(files[0]);
+
+        // hide selecting elements, show image
+        myimage.style.visibility = 'visible';
+        if (fileInput) {
+            // dropZone.style.visibility = 'hidden';
+            // we need to remove not hide to free the space
+            fileInput.parentNode.removeChild(fileInput);
+            // to not try removing when dropping to the image itself
+            fileInput = null;
+        }
+        if (dropZone) {
+            //fileInput.style.visibility = 'hidden';
+            dropZone.parentNode.removeChild(dropZone);
+            dropZone = null;
+        }
+        // accept drops for image
+        // prevents adding the listener twice
+        // TODO: sometimes it happens that that drop is accepted by browser
+        // but there is probably nothing we can do about
+        if (!isImageListening) {
+            myimage.addEventListener('dragover', handleDragOver, false);
+            myimage.addEventListener('drop', handleFileSelect, false);
+            isImageListening = true;
+        }
+    }
+
+    function handleDragOver(evt) {
+      evt.stopPropagation();
+      evt.preventDefault();
+      // explicitly show this is a copy.
+      evt.dataTransfer.dropEffect = 'copy';
+    }
+
+    function MouseWheelHandler(e){
+        // cross-browser wheel delta
+        var e = window.event || e; // old IE support
+        var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
+
+        myimage.style.width = myimage.width + (10 * delta) + "px";
+
+        return false;
+    }
+
+    function GetUrlValue(VarSearch){
+        var SearchString = window.location.search.substring(1);
+        var VariableArray = SearchString.split('&');
+        for(var i = 0; i < VariableArray.length; i++){
+            var KeyValuePair = VariableArray[i].split('=');
+            if(KeyValuePair[0] == VarSearch){
+                return KeyValuePair[1];
+            }
+        }
+        return '';
+    }
+
+    var myimage = document.getElementById("theimage");
+
+    var dropZone = document.getElementById('drop_zone');
+    var fileInput = document.getElementById('file')
+
+    // if URL does not provide image URL, set up page,
+    // otherwise use the image URL directly
+    // TODO: image URL does not work, remove or find out why
+    // it is not accepted (might be a security restriction)
+    // could be replaced by insert (web) URL but from file system
+    // it would make sense too, to behave as opening programs
+    imagepath = GetUrlValue('image')
+    if (!imagepath) {
+        myimage.style.visibility = 'hidden';
+        // set the listeners here
+        dropZone.addEventListener('dragover', handleDragOver, false);
+        dropZone.addEventListener('drop', handleFileSelect, false);
+        fileInput.addEventListener('change', handleFileSelect, false);
+    } else {
+        console.log("url provided %s", imagepath)
+        // remove unused elements
+        dropZone.parentNode.removeChild(dropZone);
+        fileInput.parentNode.removeChild(fileInput);
+        // set the image url
+        myimage.src = imagepath
+    }
+
+    // add mouse wheel listener
+    if (myimage.addEventListener) {
+        // IE9, Chrome, Safari, Opera
+        myimage.addEventListener("mousewheel", MouseWheelHandler, false);
+        // Firefox
+        myimage.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
+    } else {
+        // IE 6/7/8
+        myimage.attachEvent("onmousewheel", MouseWheelHandler);
+    }
+
+    // add on click listener
+    // make default view on left click
+    myimage.onclick=function(){
+        myimage.style.width='100%'
+    }
+</script>
+</body>
+</html>
+
